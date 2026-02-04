@@ -6,6 +6,7 @@ import glob
 import psycopg2
 import json
 import pprint
+import datetime
 
 version_list = [
     {
@@ -66,12 +67,6 @@ version_list = [
 
 
 
-
-
-
-
-
-
 access_key = 'dp-prod-interview-user'
 secret_key = 'kyJrYJ0T2O7UVv3q'
 endpoint_url = 'https://dp-prod-s3api.russianpost.ru'
@@ -86,9 +81,33 @@ sql_query = """select
 from "client-configuration-1".client_configuration.seller s 
 where id = %s;
 """
+sql_query_client = """
+SELECT 
+    s.legal_entity_name,
+    DATE(s.created_at) AS created_date,
+    COUNT(sm.id) AS marketplace_count  
+FROM "client-configuration-1".client_configuration.seller s 
+LEFT JOIN "client-configuration-1".client_configuration.seller_marketplace sm 
+    ON sm.seller_id = s.id 
+WHERE s.id = %s
+GROUP BY 
+    s.legal_entity_name, 
+    DATE(s.created_at)
+ORDER BY created_date;
+"""
+
+sql_query_payment = """
+select count(p.id)
+from "payment-service-1".payment_service.seller s 
+left join "payment-service-1".payment_service.payment p 
+on s.id = p.seller_id 
+where s.client_configuration_seller_id = %s
+"""
 
 
-seller_id='eb444d7e-3e4b-4bb1-881f-3d2451d01a4a'
+
+
+seller_id_test='eb444d7e-3e4b-4bb1-881f-3d2451d01a4a'
 
 
 path = Path('C:/Users/Nikolay/Downloads/interview')
@@ -140,36 +159,29 @@ def get_info_about_seller(server_address, db_name, login, password, sql_query, s
     return result_array
 
 
-res = get_info_about_seller(server_address, db_name, login, password, sql_query, seller_id)
+res = get_info_about_seller(server_address, db_name, login, password, sql_query_client, seller_id_test)
 
 print(res)
+date_obj=res[0][1]
+date_string = date_obj.strftime('%Y-%m-%d')
+print(date_string)  
 
 
-
-
-
-def serilalize_data(path_to_folder):
+def serilalize_json_data_form_s3(path_to_folder):
     processed_data = []
     for file in path_to_folder.glob('*.JSON'):
-        
         try:
             with open(file, 'r',  encoding='Utf-8') as interview_file:
                 interview_data = json.load(interview_file)
                 #print(interview_data[0])
                 if  isinstance(interview_data[0], dict) and interview_data[0].get('seller_id'):
-                    pprint.pprint(interview_data[0]['seller_id'] )
                     answer_dict ={}
-                    for i in interview_data[0]['answers']:
-                        answer_dict_elem = {
-                            i["question"] : i['value']
-                            }
-                        answer_dict.update(answer_dict_elem)
-                    processed_data_elem = {
-                        'seller_id': interview_data[0].get('seller_id'),
-                        'version': interview_data[0].get('version'),
-                        'answers' : answer_dict
-                        }
-                    processed_data.append(processed_data_elem)
+                    answer_dict['seller_id'] = interview_data[0]['seller_id']
+                    for i in enumerate(interview_data[0]['answers']):
+                        answer_dict[i[0]] = i[1].get('value')
+                        # print(i[0]) 
+                        # print(i[1].get('value') )
+                processed_data.append(answer_dict)
         except FileNotFoundError:
             print("Error: The specified JSON file was not found.")
         except json.JSONDecodeError as e:
@@ -178,13 +190,26 @@ def serilalize_data(path_to_folder):
             print(f"An unexpected error occurred: {e}")
     return processed_data
 
-res2 = serilalize_data(path)
+res2 = serilalize_json_data_form_s3(path)
 
-print(res2)
+#pprint.pprint(res2)
+
+for i in enumerate(version_list[0]['answers']):
+    if i[1]['options']:
+        print('Это закрытый вопрос: ' + i[1]['question'] + ' Со следующими ответами ' + str(i[1]['options']) )
+    else:
+        print('Это открытый вопрос : ' + i[1]['question'])
 
 
-my_dict = {'apple': 1, 'banana': 2}
-value = my_dict.get('banana') # вернет 2
-value_not_exist = my_dict.get('grape', 'Ключа нет') # вернет 'Ключа нет'
-print(value)
-print(value_not_exist)
+def collect_all_info_about_seller()
+def send_data_to_llm()
+def plot_a_graph()    
+def prepare_summary_report()
+def post_info_on_conflunce() 
+
+
+#my_dict = {'apple': 1, 'banana': 2}
+#value = my_dict.get('banana') # вернет 2
+#value_not_exist = my_dict.get('grape', 'Ключа нет') # вернет 'Ключа нет'
+#print(value)
+#print(value_not_exist)
