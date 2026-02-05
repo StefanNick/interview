@@ -8,6 +8,7 @@ import json
 import pprint
 import datetime
 
+
 version_list = [
     {
         'version': '1',
@@ -162,9 +163,9 @@ def get_info_about_seller(server_address, db_name, login, password, sql_query, s
 res = get_info_about_seller(server_address, db_name, login, password, sql_query_client, seller_id_test)
 
 print(res)
-date_obj=res[0][1]
+""" date_obj=res[0][1]
 date_string = date_obj.strftime('%Y-%m-%d')
-print(date_string)  
+print(date_string)   """
 
 
 def serilalize_json_data_form_s3(path_to_folder):
@@ -177,7 +178,7 @@ def serilalize_json_data_form_s3(path_to_folder):
                 if  isinstance(interview_data[0], dict) and interview_data[0].get('seller_id'):
                     answer_dict ={}
                     answer_dict['seller_id'] = interview_data[0]['seller_id']
-                    for i in enumerate(interview_data[0]['answers']):
+                    for i in enumerate(interview_data[0]['answers'], start=1):
                         answer_dict[i[0]] = i[1].get('value')
                         # print(i[0]) 
                         # print(i[1].get('value') )
@@ -192,20 +193,88 @@ def serilalize_json_data_form_s3(path_to_folder):
 
 res2 = serilalize_json_data_form_s3(path)
 
-#pprint.pprint(res2)
+""" pprint.pprint(res2)
+print(len(res2))
 
 for i in enumerate(version_list[0]['answers']):
+    print(i)
     if i[1]['options']:
         print('Это закрытый вопрос: ' + i[1]['question'] + ' Со следующими ответами ' + str(i[1]['options']) )
     else:
-        print('Это открытый вопрос : ' + i[1]['question'])
+        print('Это открытый вопрос : ' + i[1]['question']) """
 
 
-def collect_all_info_about_seller()
-def send_data_to_llm()
-def plot_a_graph()    
-def prepare_summary_report()
-def post_info_on_conflunce() 
+def collect_all_info_about_seller(info_about_seller_array):
+    result_array =[]
+    for i in info_about_seller_array:
+        if i.get('seller_id'):
+            info_about_seller_from_bd = get_info_about_seller(server_address, db_name, login, password, sql_query_client, i.get('seller_id'))
+            if info_about_seller_from_bd:
+                date_obj=info_about_seller_from_bd[0][1]
+                date_string = date_obj.strftime('%Y-%m-%d')
+                i['date_of_registration'] = date_string
+                i['company_name'] = info_about_seller_from_bd[0][0]
+                i['count_seller_marketplaces'] = info_about_seller_from_bd[0][2]
+            result_array.append(i)
+        else:
+            print('An unexpected error occurred: seller_id not found')
+            break
+    return result_array
+        
+
+test_1 = collect_all_info_about_seller(res2)
+pprint.pprint(test_1)
+
+def prepare_referance_list_two_types_questions(referance_interview_list):
+    open_questions_list = []
+    closed_question_list = []
+    for i in enumerate(referance_interview_list[0]['answers'], start=1):
+        if i[1]['options']:
+            closed_question_dict={}
+            closed_question_dict={
+                'question_number': i[0],
+                'question': i[1]['question'],
+                'options' : i[1]['options'],
+                'score_options':dict.fromkeys(range(1, (len(i[1]['options']) + 1)), 0)
+            }
+            closed_question_list.append(closed_question_dict)
+        else:
+            open_questions_dict={}
+            open_questions_dict={
+                'question_number': i[0],
+                'question': i[1]['question']
+            }
+            open_questions_list.append(open_questions_dict)
+    return open_questions_list, closed_question_list
+
+two_types_of_questions_tuple = prepare_referance_list_two_types_questions(version_list)
+#pprint.pprint(two_types_of_questions_tuple)
+
+def score_open_questions(prepared_list_question, all_info_about_sellers_list):
+    for i in prepared_list_question:
+        for j in all_info_about_sellers_list:
+            try:
+                value = int(j.get(i['question_number']))
+                i['score_options'][value] += 1
+            except:
+                print('An unexpected error occurred: wrong number of question')
+                break
+    return prepared_list_question
+
+test_32=score_open_questions(two_types_of_questions_tuple[1], test_1)
+
+pprint.pprint(test_32)
+pprint.pprint(two_types_of_questions_tuple[1])           
+
+
+
+
+
+
+#def plot_a_graph(referance_list_interview, all_sellers_info_list):
+# def send_data_to_llm()
+# def prepare_summary_report()
+# def post_info_on_conflunce() 
 
 
 #my_dict = {'apple': 1, 'banana': 2}
