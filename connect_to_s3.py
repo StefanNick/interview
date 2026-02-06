@@ -7,7 +7,7 @@ import psycopg2
 import json
 import pprint
 import datetime
-
+import copy
 
 version_list = [
     {
@@ -251,7 +251,8 @@ two_types_of_questions_tuple = prepare_referance_list_two_types_questions(versio
 #pprint.pprint(two_types_of_questions_tuple)
 
 def score_open_questions(prepared_list_question, all_info_about_sellers_list):
-    for i in prepared_list_question:
+    prepared_list_question_deep_copy = copy.deepcopy(prepared_list_question)
+    for i in prepared_list_question_deep_copy:
         for j in all_info_about_sellers_list:
             try:
                 value = int(j.get(i['question_number']))
@@ -259,7 +260,7 @@ def score_open_questions(prepared_list_question, all_info_about_sellers_list):
             except:
                 print('An unexpected error occurred: wrong number of question')
                 break
-    return prepared_list_question
+    return prepared_list_question_deep_copy
 
 test_32=score_open_questions(two_types_of_questions_tuple[1], test_1)
 
